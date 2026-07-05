@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis gastos personales</title>
+
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+
+<style>
+:root{
+  --bg:#FAF7F2;
+  --card:#FFFFFF;
+  --text:#2F2A26;
+  --muted:#7B6D62;
+  --border:#E6DDD4;
+  --accent:#B85C38;
+  --accent2:#D98E5F;
+  --danger:#B23A48;
+  --dangerBg:#F9E7E9;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#241914;
+    --card:#30231D;
+    --text:#FFF7EF;
+    --muted:#D6BFAE;
+    --border:#4A372E;
+    --accent:#D98E5F;
+    --accent2:#F0B27A;
+    --danger:#FF9AA8;
+    --dangerBg:#4A222A;
+  }
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  max-width:700px;
+  margin:20px auto;
+  padding:15px;
+  background:linear-gradient(180deg,var(--bg),#FFFDF9);
+  color:var(--text);
+}
+@media (prefers-color-scheme:dark){
+  body{background:var(--bg);}
+}
+h1{font-size:28px;margin-bottom:2px}
+.brand-subtitle{margin-bottom:18px;color:var(--muted);font-size:14px}
+.periodo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.periodo-label{font-size:13px;color:var(--muted);margin-top:8px}
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:15px;
+  box-shadow:0 3px 12px rgba(96,58,32,.08);
+}
+input,select,button{
+  padding:12px;
+  font-size:16px;
+  margin:6px 0;
+  width:100%;
+  box-sizing:border-box;
+  border-radius:10px;
+  border:1px solid var(--border);
+}
+input,select{
+  background:var(--card);
+  color:var(--text);
+}
+input:disabled,select:disabled{
+  opacity:.65;
+}
+button{
+  cursor:pointer;
+  border:none;
+  background:var(--accent);
+  color:white;
+  font-weight:600;
+}
+button.danger{
+  width:auto;
+  font-size:12px;
+  padding:6px 10px;
+  background:var(--dangerBg);
+  color:var(--danger);
+  border:1px solid rgba(178,58,72,.25);
+}
+button.reset{
+  width:auto;
+  font-size:12px;
+  padding:6px 10px;
+  background:rgba(230,221,212,.55);
+  color:var(--muted);
+  border:1px solid var(--border);
+}
+.saldo{
+  font-size:34px;
+  font-weight:800;
+  margin-top:6px;
+}
+.item{
+  border-top:1px solid var(--border);
+  padding:12px 0;
+}
+.small{
+  color:var(--muted);
+  font-size:13px;
+}
+.row{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+}
+#toast{
+  display:none;
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:var(--accent);
+  color:white;
+  padding:10px 16px;
+  border-radius:20px;
+}
+</style>
+</head>
+<body>
+
+<h1>Mis gastos personales</h1>
+<div class="brand-subtitle">by TarTeTaTin</div>
+
+<div class="card">
+  <button class="reset" onclick="reiniciarPresupuesto()">Reiniciar presupuesto</button>
+  <div class="small">Borra todos los gastos registrados.</div>
+
+  <label>Presupuesto inicial</label>
+  <div class="small" id="textoPresupuesto">Selecciona mes y año. Una vez guardado, el presupuesto queda bloqueado.</div>
+
+  <div class="periodo-grid">
+    <div>
+      <div class="periodo-label">Mes</div>
+      <select id="periodoMes">
+        <option value="">Seleccionar mes</option>
+        <option value="Enero">Enero</option>
+        <option value="Febrero">Febrero</option>
+        <option value="Marzo">Marzo</option>
+        <option value="Abril">Abril</option>
+        <option value="Mayo">Mayo</option>
+        <option value="Junio">Junio</option>
+        <option value="Julio">Julio</option>
+        <option value="Agosto">Agosto</option>
+        <option value="Septiembre">Septiembre</option>
+        <option value="Octubre">Octubre</option>
+        <option value="Noviembre">Noviembre</option>
+        <option value="Diciembre">Diciembre</option>
+      </select>
+    </div>
+    <div>
+      <div class="periodo-label">Año</div>
+      <select id="periodoAnio">
+        <option value="">Seleccionar año</option>
+        <option value="2026">2026</option>
+        <option value="2027">2027</option>
+        <option value="2028">2028</option>
+        <option value="2029">2029</option>
+        <option value="2030">2030</option>
+        <option value="2031">2031</option>
+        <option value="2032">2032</option>
+        <option value="2033">2033</option>
+        <option value="2034">2034</option>
+        <option value="2035">2035</option>
+        <option value="2036">2036</option>
+      </select>
+    </div>
+  </div>
+
+  <input type="number" inputmode="numeric" pattern="[0-9]*" id="presupuestoInicial" placeholder="Ej. 500000">
+  <button id="botonPresupuesto" onclick="guardarPresupuesto()">Guardar presupuesto</button>
+</div>
+
+<div class="card">
+  <div>Período</div>
+  <div class="small" id="periodoActual">Sin definir</div>
+  <br>
+  <div>Saldo disponible</div>
+  <div class="saldo" id="saldoDisponible">$0</div>
+</div>
+
+<div class="card">
+  <h3>Registrar gasto</h3>
+  <input type="number" inputmode="numeric" pattern="[0-9]*" id="monto" placeholder="Monto">
+  <input type="text" id="descripcion" placeholder="Descripción">
+  <button onclick="agregarGasto()">Agregar gasto</button>
+</div>
+
+<div class="card">
+  <h3>Historial</h3>
+  <div id="historial"></div>
+</div>
+
+<div id="toast">Gasto registrado ✓</div>
+
+<script>
+let presupuestoInicial = Number(localStorage.getItem("presupuestoInicial") || 0);
+let periodoMes = localStorage.getItem("periodoMes") || "";
+let periodoAnio = localStorage.getItem("periodoAnio") || "";
+let gastos = JSON.parse(localStorage.getItem("gastos") || "[]");
+
+function formato(n){
+ const signo = n < 0 ? "-" : "";
+ return signo + "$" + Math.abs(Math.round(n)).toLocaleString("es-CL");
+}
+
+function guardar(){
+ localStorage.setItem("presupuestoInicial", presupuestoInicial);
+ localStorage.setItem("periodoMes", periodoMes);
+ localStorage.setItem("periodoAnio", periodoAnio);
+ localStorage.setItem("gastos", JSON.stringify(gastos));
+}
+
+function saldoDisponible(){
+ return presupuestoInicial - gastos.reduce((a,g)=>a+Number(g.monto),0);
+}
+
+function guardarPresupuesto(){
+ if(presupuestoInicial > 0){
+   alert("El presupuesto ya está guardado. Para cambiarlo, reinicia el presupuesto.");
+   return;
+ }
+
+ periodoMes = document.getElementById("periodoMes").value;
+ periodoAnio = document.getElementById("periodoAnio").value;
+ presupuestoInicial = Number(document.getElementById("presupuestoInicial").value || 0);
+
+ if(!periodoMes){
+   alert("Selecciona el mes del presupuesto.");
+   return;
+ }
+
+ if(!periodoAnio){
+   alert("Selecciona el año del presupuesto.");
+   return;
+ }
+
+ if(!presupuestoInicial || presupuestoInicial <= 0){
+   alert("Ingresa un presupuesto válido.");
+   return;
+ }
+
+ guardar();
+ render();
+ toast("Presupuesto guardado");
+}
+
+function toast(msg){
+ const t=document.getElementById("toast");
+ t.textContent=msg;
+ t.style.display="block";
+ setTimeout(()=>t.style.display="none",1500);
+}
+
+function agregarGasto(){
+ const monto = Number(document.getElementById("monto").value);
+ const descripcion = document.getElementById("descripcion").value.trim();
+
+ if(!monto || monto<=0){
+   alert("Ingresa un monto válido.");
+   return;
+ }
+
+ gastos.unshift({
+   id: Date.now().toString(),
+   fecha: new Date().toLocaleString("es-CL"),
+   monto,
+   descripcion
+ });
+
+ guardar();
+
+ document.getElementById("monto").value="";
+ document.getElementById("descripcion").value="";
+ document.getElementById("monto").focus();
+
+ render();
+ toast("Gasto registrado ✓");
+}
+
+function anularGasto(id){
+ if(!confirm("¿Anular este gasto?")) return;
+ gastos = gastos.filter(g=>g.id!==id);
+ guardar();
+ render();
+}
+
+function reiniciarPresupuesto(){
+ if(!confirm("Esto borrará el presupuesto y todos los gastos. ¿Continuar?")) return;
+ if(!confirm("Última confirmación. Esta acción no se puede deshacer.")) return;
+
+ presupuestoInicial = 0;
+ periodoMes = "";
+ periodoAnio = "";
+ gastos = [];
+ guardar();
+
+ document.getElementById("presupuestoInicial").value="";
+ document.getElementById("periodoMes").value="";
+ document.getElementById("periodoAnio").value="";
+ render();
+}
+
+function render(){
+ document.getElementById("saldoDisponible").textContent = formato(saldoDisponible());
+ document.getElementById("periodoActual").textContent = (periodoMes && periodoAnio) ? (periodoMes + " " + periodoAnio) : "Sin definir";
+ document.getElementById("periodoMes").value = periodoMes || "";
+ document.getElementById("periodoAnio").value = periodoAnio || "";
+
+ const inputPresupuesto = document.getElementById("presupuestoInicial");
+ const inputMes = document.getElementById("periodoMes");
+ const inputAnio = document.getElementById("periodoAnio");
+ const botonPresupuesto = document.getElementById("botonPresupuesto");
+ const textoPresupuesto = document.getElementById("textoPresupuesto");
+
+ if(presupuestoInicial > 0){
+   inputPresupuesto.disabled = true;
+   inputMes.disabled = true;
+   inputAnio.disabled = true;
+   botonPresupuesto.disabled = true;
+   botonPresupuesto.textContent = "Presupuesto guardado";
+   textoPresupuesto.textContent = "Presupuesto y período bloqueados. Para cambiarlos, reinicia el presupuesto.";
+ }else{
+   inputPresupuesto.disabled = false;
+   inputMes.disabled = false;
+   inputAnio.disabled = false;
+   botonPresupuesto.disabled = false;
+   botonPresupuesto.textContent = "Guardar presupuesto";
+   textoPresupuesto.textContent = "Selecciona mes y año. Una vez guardado, el presupuesto queda bloqueado.";
+ }
+
+ const h = document.getElementById("historial");
+ h.innerHTML = "";
+
+ if(gastos.length===0){
+   h.innerHTML = "<div class='small'>Todavía no hay gastos registrados.</div>";
+   return;
+ }
+
+ let saldo = presupuestoInicial;
+ const cronologico=[...gastos].reverse();
+ const saldos={};
+
+ cronologico.forEach(g=>{
+   saldo -= Number(g.monto);
+   saldos[g.id]=saldo;
+ });
+
+ gastos.forEach(g=>{
+   const div=document.createElement("div");
+   div.className="item";
+   div.innerHTML=`
+   <div class="row">
+      <div>
+        <strong>${g.descripcion || "(sin descripción)"}</strong><br>
+        -${formato(g.monto)}<br>
+        <span class="small">${g.fecha}</span><br>
+        <span class="small">Saldo: ${formato(saldos[g.id])}</span>
+      </div>
+      <div>
+        <button class="danger" onclick="anularGasto('${g.id}')">Anular</button>
+      </div>
+   </div>`;
+   h.appendChild(div);
+ });
+}
+
+document.getElementById("presupuestoInicial").value = presupuestoInicial || "";
+render();
+document.getElementById("monto").focus();
+</script>
+
+</body>
+</html>
