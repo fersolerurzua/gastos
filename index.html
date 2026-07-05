@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis Gastos</title>
+
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+
+<style>
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  max-width:700px;
+  margin:20px auto;
+  padding:15px;
+  background:#fafafa;
+  color:#111;
+}
+h1{font-size:28px;margin-bottom:18px}
+.card{
+  background:white;
+  border:1px solid #ddd;
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:15px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+input,button{
+  padding:12px;
+  font-size:16px;
+  margin:6px 0;
+  width:100%;
+  box-sizing:border-box;
+  border-radius:10px;
+  border:1px solid #ccc;
+}
+button{
+  cursor:pointer;
+  border:none;
+  background:#111;
+  color:white;
+  font-weight:600;
+}
+button.danger{
+  width:auto;
+  font-size:12px;
+  padding:6px 10px;
+  background:#f3f3f3;
+  color:#9b1c1c;
+  border:1px solid #e1caca;
+}
+button.reset{
+  width:auto;
+  font-size:12px;
+  padding:6px 10px;
+  background:#f7f7f7;
+  color:#777;
+  border:1px solid #ddd;
+}
+.saldo{
+  font-size:34px;
+  font-weight:800;
+  margin-top:6px;
+}
+.item{
+  border-top:1px solid #eee;
+  padding:12px 0;
+}
+.small{
+  color:#666;
+  font-size:13px;
+}
+.row{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+}
+#toast{
+  display:none;
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#111;
+  color:white;
+  padding:10px 16px;
+  border-radius:20px;
+}
+</style>
+</head>
+<body>
+
+<h1>Mis Gastos</h1>
+
+<div class="card">
+  <button class="reset" onclick="reiniciarPresupuesto()">Reiniciar presupuesto</button>
+  <div class="small">Borra todos los gastos registrados.</div>
+
+  <label>Presupuesto inicial</label>
+  <input type="number" inputmode="numeric" pattern="[0-9]*" id="presupuestoInicial" placeholder="Ej. 500000">
+  <button onclick="guardarPresupuesto()">Guardar presupuesto</button>
+</div>
+
+<div class="card">
+  <div>Saldo disponible</div>
+  <div class="saldo" id="saldoDisponible">$0</div>
+</div>
+
+<div class="card">
+  <h3>Registrar gasto</h3>
+  <input type="number" inputmode="numeric" pattern="[0-9]*" id="monto" placeholder="Monto">
+  <input type="text" id="descripcion" placeholder="Descripción">
+  <button onclick="agregarGasto()">Agregar gasto</button>
+</div>
+
+<div class="card">
+  <h3>Historial</h3>
+  <div id="historial"></div>
+</div>
+
+<div id="toast">Gasto registrado ✓</div>
+
+<script>
+let presupuestoInicial = Number(localStorage.getItem("presupuestoInicial") || 0);
+let gastos = JSON.parse(localStorage.getItem("gastos") || "[]");
+
+function formato(n){
+ return "$" + Math.round(n).toLocaleString("es-CL");
+}
+
+function guardar(){
+ localStorage.setItem("presupuestoInicial", presupuestoInicial);
+ localStorage.setItem("gastos", JSON.stringify(gastos));
+}
+
+function saldoDisponible(){
+ return presupuestoInicial - gastos.reduce((a,g)=>a+Number(g.monto),0);
+}
+
+function guardarPresupuesto(){
+ presupuestoInicial = Number(document.getElementById("presupuestoInicial").value || 0);
+ guardar();
+ render();
+}
+
+function toast(msg){
+ const t=document.getElementById("toast");
+ t.textContent=msg;
+ t.style.display="block";
+ setTimeout(()=>t.style.display="none",1500);
+}
+
+function agregarGasto(){
+ const monto = Number(document.getElementById("monto").value);
+ const descripcion = document.getElementById("descripcion").value.trim();
+
+ if(!monto || monto<=0){
+   alert("Ingresa un monto válido.");
+   return;
+ }
+
+ gastos.unshift({
+   id: Date.now().toString(),
+   fecha: new Date().toLocaleString("es-CL"),
+   monto,
+   descripcion
+ });
+
+ guardar();
+
+ document.getElementById("monto").value="";
+ document.getElementById("descripcion").value="";
+ document.getElementById("monto").focus();
+
+ render();
+ toast("Gasto registrado ✓");
+}
+
+function anularGasto(id){
+ if(!confirm("¿Anular este gasto?")) return;
+ gastos = gastos.filter(g=>g.id!==id);
+ guardar();
+ render();
+}
+
+function reiniciarPresupuesto(){
+ if(!confirm("Esto borrará el presupuesto y todos los gastos. ¿Continuar?")) return;
+ if(!confirm("Última confirmación. Esta acción no se puede deshacer.")) return;
+
+ presupuestoInicial = 0;
+ gastos = [];
+ guardar();
+
+ document.getElementById("presupuestoInicial").value="";
+ render();
+}
+
+function render(){
+ document.getElementById("saldoDisponible").textContent = formato(saldoDisponible());
+
+ const h = document.getElementById("historial");
+ h.innerHTML = "";
+
+ if(gastos.length===0){
+   h.innerHTML = "<div class='small'>Todavía no hay gastos registrados.</div>";
+   return;
+ }
+
+ let saldo = presupuestoInicial;
+ const cronologico=[...gastos].reverse();
+ const saldos={};
+
+ cronologico.forEach(g=>{
+   saldo -= Number(g.monto);
+   saldos[g.id]=saldo;
+ });
+
+ gastos.forEach(g=>{
+   const div=document.createElement("div");
+   div.className="item";
+   div.innerHTML=`
+   <div class="row">
+      <div>
+        <strong>${g.descripcion || "(sin descripción)"}</strong><br>
+        -${formato(g.monto)}<br>
+        <span class="small">${g.fecha}</span><br>
+        <span class="small">Saldo: ${formato(saldos[g.id])}</span>
+      </div>
+      <div>
+        <button class="danger" onclick="anularGasto('${g.id}')">Anular</button>
+      </div>
+   </div>`;
+   h.appendChild(div);
+ });
+}
+
+document.getElementById("presupuestoInicial").value = presupuestoInicial || "";
+render();
+document.getElementById("monto").focus();
+</script>
+
+</body>
+</html>
